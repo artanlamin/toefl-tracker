@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOEFL Tracker</title>
+<style>
+  :root{
+    --paper: #EDEAE0;
+    --panel: #F8F6EF;
+    --ink: #1E2320;
+    --ink-soft: #565F58;
+    --line: #D9D4C4;
+    --gold: #A8823C;
+    --gold-soft: #EFE3C8;
+    --teal: #3F6B5E;
+    --teal-soft: #DCE8E3;
+    --clay: #A6503C;
+    --clay-soft: #F1DCD4;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{
+    max-width:980px;
+    margin:0 auto;
+    padding:36px 28px 80px;
+  }
+  header.top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    border-bottom:1px solid var(--line);
+    padding-bottom:20px;
+    margin-bottom:28px;
+    gap:20px;
+    flex-wrap:wrap;
+  }
+  h1{
+    font-family:Iowan Old Style, Palatino, Georgia, serif;
+    font-size:32px;
+    font-weight:500;
+    margin:0 0 4px;
+    letter-spacing:0.2px;
+  }
+  .sub{
+    color:var(--ink-soft);
+    font-size:14px;
+    margin:0;
+  }
+  .overall-group{
+    display:flex;
+    gap:28px;
+  }
+  .overall{
+    text-align:right;
+    min-width:120px;
+  }
+  .overall.toggle-day{
+    cursor:pointer;
+    padding:2px 4px;
+    border-radius:6px;
+    transition:background .15s ease;
+  }
+  .overall.toggle-day:hover{
+    background:var(--panel);
+  }
+  .toggle-hint{
+    font-size:11px;
+    margin-top:3px;
+    color:var(--gold);
+  }
+  .overall.toggle-day.marked .toggle-hint{
+    color:var(--teal);
+  }
+  .overall.toggle-day.marked .num{
+    color:var(--teal);
+  }
+  .overall .num{
+    font-family:Iowan Old Style, Palatino, Georgia, serif;
+    font-size:30px;
+    color:var(--gold);
+    line-height:1;
+  }
+  .overall .lbl{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-top:4px;
+  }
+  nav.tabs{
+    display:flex;
+    gap:4px;
+    margin-bottom:24px;
+    border-bottom:1px solid var(--line);
+    flex-wrap:wrap;
+  }
+  nav.tabs button{
+    background:none;
+    border:none;
+    padding:11px 16px;
+    font-size:14.5px;
+    color:var(--ink-soft);
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    margin-bottom:-1px;
+    font-family:inherit;
+  }
+  nav.tabs button.active{
+    color:var(--ink);
+    border-bottom-color:var(--gold);
+    font-weight:600;
+  }
+  nav.tabs button .count{
+    color:var(--ink-soft);
+    font-weight:400;
+    margin-left:5px;
+    font-size:12.5px;
+  }
+  .section-progress{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:22px;
+  }
+  .bar-track{
+    flex:1;
+    height:6px;
+    background:var(--line);
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .bar-fill{
+    height:100%;
+    background:var(--teal);
+    transition:width .3s ease;
+  }
+  .bar-pct{
+    font-size:13px;
+    color:var(--ink-soft);
+    min-width:60px;
+    text-align:right;
+  }
+  .topic{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:16px 18px;
+    margin-bottom:10px;
+  }
+  .topic-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .topic-title-row{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .topic-name{
+    font-size:16px;
+    font-weight:600;
+  }
+  .topic-name-input{
+    font-size:16px;
+    font-weight:600;
+    border:none;
+    background:transparent;
+    font-family:inherit;
+    color:var(--ink);
+    padding:0;
+    width:100%;
+    border-bottom:1px dashed var(--line);
+  }
+  .topic-desc{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    margin-top:3px;
+  }
+  .status-pill{
+    border:none;
+    border-radius:14px;
+    padding:5px 12px;
+    font-size:12.5px;
+    cursor:pointer;
+    font-family:inherit;
+    white-space:nowrap;
+  }
+  .status-todo{background:var(--clay-soft); color:var(--clay);}
+  .status-progress{background:var(--gold-soft); color:var(--gold);}
+  .status-done{background:var(--teal-soft); color:var(--teal);}
+  .topic-body{
+    margin-top:12px;
+  }
+  .links-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .link-chip{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:5px;
+    padding:5px 8px 5px 10px;
+    font-size:13px;
+  }
+  .link-chip a{
+    color:var(--ink);
+    text-decoration:none;
+    max-width:220px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .link-chip a:hover{ color:var(--gold); }
+  .link-chip button{
+    border:none;
+    background:none;
+    color:var(--ink-soft);
+    cursor:pointer;
+    font-size:14px;
+    line-height:1;
+    padding:0;
+  }
+  .add-link-row{
+    display:flex;
+    gap:6px;
+    margin-bottom:10px;
+  }
+  .add-link-row input{
+    flex:1;
+    font-size:13px;
+    padding:6px 9px;
+    border:1px solid var(--line);
+    border-radius:5px;
+    font-family:inherit;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  .add-link-row button{
+    border:1px solid var(--line);
+    background:var(--paper);
+    border-radius:5px;
+    padding:6px 12px;
+    font-size:13px;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  textarea.notes{
+    width:100%;
+    min-height:44px;
+    resize:vertical;
+    border:1px solid var(--line);
+    border-radius:5px;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:inherit;
+    font-size:13.5px;
+    padding:8px 10px;
+  }
+  .topic-footer{
+    display:flex;
+    justify-content:flex-end;
+    margin-top:8px;
+  }
+  .remove-topic{
+    border:none;
+    background:none;
+    color:var(--ink-soft);
+    font-size:12.5px;
+    cursor:pointer;
+    text-decoration:underline;
+  }
+  .add-topic-btn{
+    width:100%;
+    padding:12px;
+    border:1px dashed var(--line);
+    border-radius:6px;
+    background:none;
+    color:var(--ink-soft);
+    font-size:14px;
+    cursor:pointer;
+    margin-top:4px;
+    font-family:inherit;
+  }
+  .add-topic-btn:hover{ border-color:var(--gold); color:var(--gold); }
+
+  /* Mock tests tab */
+  .mock-table{
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:20px;
+  }
+  .mock-table th{
+    text-align:left;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    font-weight:600;
+    padding:8px 10px;
+    border-bottom:1px solid var(--line);
+  }
+  .mock-table td{
+    padding:9px 10px;
+    border-bottom:1px solid var(--line);
+    font-size:14px;
+  }
+  .mock-table input{
+    width:56px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:4px 6px;
+    font-family:inherit;
+    font-size:13.5px;
+    background:var(--panel);
+    color:var(--ink);
+  }
+  .mock-table input.date-input{ width:120px; }
+  .mock-table input.notes-input{ width:150px; }
+  .mock-overall{
+    font-weight:700;
+    color:var(--gold);
+  }
+  .del-row{
+    border:none;
+    background:none;
+    color:var(--ink-soft);
+    cursor:pointer;
+    font-size:15px;
+  }
+  .add-mock-btn{
+    padding:10px 16px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:var(--panel);
+    color:var(--ink);
+    font-size:14px;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .add-mock-btn:hover{ border-color:var(--gold); color:var(--gold); }
+  .chart-wrap{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:18px 20px 10px;
+    margin-bottom:22px;
+  }
+  .chart-title{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-bottom:10px;
+  }
+  .empty{
+    color:var(--ink-soft);
+    font-size:14px;
+    padding:30px 0;
+    text-align:center;
+    border:1px dashed var(--line);
+    border-radius:6px;
+  }
+  .score-stats{
+    display:flex;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:6px;
+    margin-bottom:20px;
+    overflow:hidden;
+  }
+  .score-cell{
+    flex:1;
+    padding:14px 18px;
+    border-right:1px solid var(--line);
+  }
+  .score-cell:last-child{ border-right:none; }
+  .score-label{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-bottom:5px;
+  }
+  .score-value{
+    font-family:Iowan Old Style, Palatino, Georgia, serif;
+    font-size:22px;
+    color:var(--ink);
+  }
+  .score-value.accent{ color:var(--gold); }
+  .score-input{
+    border:none;
+    background:transparent;
+    font-family:Iowan Old Style, Palatino, Georgia, serif;
+    font-size:22px;
+    color:var(--ink);
+    padding:0;
+    width:80px;
+    border-bottom:1px dashed var(--line);
+  }
+  .gap-note{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-top:4px;
+  }
+  .gap-note.reached{ color:var(--teal); }
+  @media (max-width: 640px){
+    .score-stats{ flex-direction:column; }
+    .score-cell{ border-right:none; border-bottom:1px solid var(--line); }
+    .score-cell:last-child{ border-bottom:none; }
+  }
+  .save-note{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-top:26px;
+    text-align:center;
+  }
+  .filters{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    flex-wrap:wrap;
+    margin-bottom:16px;
+    padding-bottom:14px;
+    border-bottom:1px solid var(--line);
+  }
+  .filter-group{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    flex-wrap:wrap;
+  }
+  .filter-group-label{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-right:2px;
+  }
+  .flame-filter-btn{
+    border:1px solid var(--line);
+    background:var(--panel);
+    border-radius:14px;
+    padding:5px 12px;
+    font-size:11px;
+    cursor:pointer;
+    color:var(--ink-soft);
+    letter-spacing:2px;
+  }
+  .flame-filter-btn.active{
+    border-color:var(--gold);
+    color:var(--gold);
+    background:var(--gold-soft);
+  }
+  .tag-filter-btn{
+    border:1px solid var(--line);
+    background:var(--panel);
+    border-radius:14px;
+    padding:5px 11px;
+    font-size:13px;
+    cursor:pointer;
+    color:var(--ink-soft);
+  }
+  .tag-filter-btn.active{
+    border-color:var(--teal);
+    color:var(--teal);
+    background:var(--teal-soft);
+  }
+  .clear-filters{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    text-decoration:underline;
+    cursor:pointer;
+    background:none;
+    border:none;
+  }
+  .meta-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:8px;
+  }
+  .difficulty-btns{
+    display:flex;
+    gap:3px;
+    align-items:center;
+  }
+  .flame-btn{
+    background:none;
+    border:none;
+    font-size:9px;
+    cursor:pointer;
+    color:var(--line);
+    padding:0 1px;
+  }
+  .flame-btn.lit{
+    color:var(--gold);
+  }
+  .tag-chip{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    background:var(--teal-soft);
+    color:var(--teal);
+    border-radius:12px;
+    padding:3px 9px 3px 10px;
+    font-size:12.5px;
+  }
+  .tag-chip button{
+    border:none;
+    background:none;
+    color:var(--teal);
+    cursor:pointer;
+    font-size:12px;
+    line-height:1;
+    padding:0;
+    opacity:0.7;
+  }
+  .add-tag-row{
+    display:flex;
+    gap:6px;
+    align-items:center;
+    margin-top:8px;
+  }
+  .add-tag-row input{
+    font-size:12.5px;
+    padding:5px 8px;
+    border:1px solid var(--line);
+    border-radius:12px;
+    font-family:inherit;
+    background:var(--paper);
+    color:var(--ink);
+    width:130px;
+  }
+  .add-tag-row button{
+    border:1px solid var(--line);
+    background:var(--paper);
+    border-radius:12px;
+    padding:5px 11px;
+    font-size:12.5px;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  .date-chip{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    background:var(--gold-soft);
+    color:var(--gold);
+    border-radius:12px;
+    padding:3px 9px 3px 10px;
+    font-size:12.5px;
+  }
+  .date-chip button{
+    border:none;
+    background:none;
+    color:var(--gold);
+    cursor:pointer;
+    font-size:12px;
+    line-height:1;
+    padding:0;
+    opacity:0.7;
+  }
+  .add-date-row{
+    display:flex;
+    gap:6px;
+    align-items:center;
+    margin-top:8px;
+  }
+  .add-date-row input{
+    font-size:12.5px;
+    padding:5px 8px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-family:inherit;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  .add-date-row button{
+    border:1px solid var(--line);
+    background:var(--paper);
+    border-radius:6px;
+    padding:5px 11px;
+    font-size:12.5px;
+    cursor:pointer;
+    color:var(--ink);
+  }
+  .field-label{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    margin:10px 0 4px;
+  }
+</style>
+</head>
+<body>
+<div id="root" class="app"></div>
+
+<script>
+const TASK_SECTIONS = [
+  {id:'reading', label:'Reading'},
+  {id:'listening', label:'Listening'},
+  {id:'speaking', label:'Speaking'},
+  {id:'writing', label:'Writing'},
+];
+
+// Тематические блоки — о чём тексты/лекции (контентные темы, не привязаны к одному разделу)
+const DEFAULT_TOPICS = [
+  {id:'t1', name:'Наука и природа', desc:'ecosystem, adaptation, erosion, atmosphere', status:'todo', links:[], notes:'', difficulty:2, tags:['наука'], dates:[]},
+  {id:'t2', name:'История и общество', desc:'settlement, civilization, migration', status:'todo', links:[], notes:'', difficulty:2, tags:['наука'], dates:[]},
+  {id:'t3', name:'Экономика и психология', desc:'академические лекции/тексты — supply and demand, cognitive, behavior', status:'todo', links:[], notes:'', difficulty:3, tags:['наука'], dates:[]},
+  {id:'t4', name:'Повседневные тексты и ситуации', desc:'письма, объявления, меню — application, deadline, notification, policy', status:'todo', links:[], notes:'', difficulty:1, tags:['повседневность'], dates:[]},
+  {id:'t5', name:'Campus — жильё/общежитие', desc:'leak, faucet, lease, maintenance', status:'todo', links:[], notes:'', difficulty:1, tags:['повседневность','кампус'], dates:[]},
+  {id:'t6', name:'Campus — администрация/учёба', desc:'tuition, prerequisite, transcript, waitlist', status:'todo', links:[], notes:'', difficulty:1, tags:['повседневность','кампус'], dates:[]},
+];
+
+// Типы заданий по разделам (новый формат TOEFL с 21 января 2026)
+const DEFAULT_TASKS = [
+  // Reading — 3 типа
+  {id:'rt1', section:'reading', name:'Complete the Words', desc:'заполнение пропущенных букв в академическом тексте', status:'todo', links:[], notes:''},
+  {id:'rt2', section:'reading', name:'Read in Daily Life', desc:'короткие практические тексты — письма, объявления, меню', status:'todo', links:[], notes:''},
+  {id:'rt3', section:'reading', name:'Read an Academic Text', desc:'короткий академический отрывок с вопросами', status:'todo', links:[], notes:''},
+  // Listening — 4 типа
+  {id:'lt1', section:'listening', name:'Listen and Choose a Response', desc:'короткая реплика — выбрать уместный ответ', status:'todo', links:[], notes:''},
+  {id:'lt2', section:'listening', name:'Listen to a Conversation', desc:'диалог (кампус/бытовая ситуация), 2 вопроса', status:'todo', links:[], notes:''},
+  {id:'lt3', section:'listening', name:'Listen to an Announcement', desc:'короткое объявление, 40–85 слов', status:'todo', links:[], notes:''},
+  {id:'lt4', section:'listening', name:'Listen to an Academic Talk', desc:'короткая лекция 100–250 слов, 4 вопроса', status:'todo', links:[], notes:''},
+  // Speaking — 2 типа
+  {id:'st1', section:'speaking', name:'Listen and Repeat', desc:'7 предложений — точность повтора, произношение, беглость', status:'todo', links:[], notes:''},
+  {id:'st2', section:'speaking', name:'Take an Interview', desc:'4 вопроса по одной теме, спонтанный ответ без подготовки', status:'todo', links:[], notes:''},
+  // Writing — 3 типа
+  {id:'wt1', section:'writing', name:'Build a Sentence', desc:'собрать грамматически верное предложение из слов', status:'todo', links:[], notes:''},
+  {id:'wt2', section:'writing', name:'Write an Email', desc:'деловое письмо на бытовую тему — request, attach, confirm', status:'todo', links:[], notes:''},
+  {id:'wt3', section:'writing', name:'Academic Discussion', desc:'короткий аргументированный ответ в учебной дискуссии', status:'todo', links:[], notes:''},
+];
+
+function uid(){ return Math.random().toString(36).slice(2,9); }
+
+// Локальное хранилище браузера (работает офлайн, в т.ч. как приложение на экране «Домой»)
+const LS_PREFIX = 'toefl_tracker_';
+function lsGet(key){
+  return new Promise((resolve)=>{
+    try{
+      const raw = localStorage.getItem(LS_PREFIX + key);
+      resolve(raw === null ? null : {value: raw});
+    }catch(e){ resolve(null); }
+  });
+}
+function lsSet(key, value){
+  return new Promise((resolve)=>{
+    try{
+      localStorage.setItem(LS_PREFIX + key, value);
+      resolve({key, value});
+    }catch(e){ resolve(null); }
+  });
+}
+
+function loadState(cb){
+  Promise.all([
+    lsGet('topics'),
+    lsGet('tasks'),
+    lsGet('mocktests'),
+    lsGet('prepdays'),
+    lsGet('targetscore'),
+  ]).then(([t,tk,m,pd,ts])=>{
+    cb({
+      topics: t ? JSON.parse(t.value) : DEFAULT_TOPICS,
+      tasks: tk ? JSON.parse(tk.value) : DEFAULT_TASKS,
+      mocks: m ? JSON.parse(m.value) : [],
+      prepDays: pd ? JSON.parse(pd.value) : [],
+      targetScore: ts ? ts.value : '',
+    });
+  });
+}
+
+function saveTopics(topics){
+  lsSet('topics', JSON.stringify(topics));
+}
+function saveTasks(tasks){
+  lsSet('tasks', JSON.stringify(tasks));
+}
+function saveMocks(mocks){
+  lsSet('mocktests', JSON.stringify(mocks));
+}
+function savePrepDays(days){
+  lsSet('prepdays', JSON.stringify(days));
+}
+function saveTargetScore(v){
+  lsSet('targetscore', String(v));
+}
+
+let state = { topics: [], tasks: [], mocks: [], prepDays: [], targetScore: '', tab: 'topics', taskSection: 'reading', topicFilters: {difficulty:null, tags:[]}, ready:false };
+
+function statusLabel(s){
+  return s==='done' ? 'Готово' : s==='progress' ? 'В процессе' : 'Не начато';
+}
+function nextStatus(s){
+  return s==='todo' ? 'progress' : s==='progress' ? 'done' : 'todo';
+}
+
+function progressOf(items){
+  if(items.length===0) return 0;
+  const score = items.reduce((a,t)=> a + (t.status==='done'?1:t.status==='progress'?0.5:0), 0);
+  return Math.round(score/items.length*100);
+}
+function taskSectionProgress(sectionId){
+  return progressOf(state.tasks.filter(t=>t.section===sectionId));
+}
+function topicsProgress(){
+  return progressOf(state.topics);
+}
+function tasksProgress(){
+  return progressOf(state.tasks);
+}
+function overallProgress(){
+  return progressOf([...state.topics, ...state.tasks]);
+}
+
+function ruPlural(n, one, few, many){
+  const mod10 = n % 10, mod100 = n % 100;
+  if(mod100 >= 11 && mod100 <= 14) return many;
+  if(mod10 === 1) return one;
+  if(mod10 >= 2 && mod10 <= 4) return few;
+  return many;
+}
+
+function todayIso(){
+  return new Date().toISOString().slice(0,10);
+}
+
+function daysPreparingCount(){
+  return state.prepDays.length;
+}
+
+function isMarkedToday(){
+  return state.prepDays.includes(todayIso());
+}
+
+function render(){
+  const root = document.getElementById('root');
+  if(!state.ready){ root.innerHTML = ''; return; }
+
+  const op = overallProgress();
+  const count = daysPreparingCount();
+  const marked = isMarkedToday();
+
+  let html = `
+    <header class="top">
+      <div>
+        <h1>TOEFL — трек подготовки</h1>
+        <p class="sub">Новый формат экзамена</p>
+      </div>
+      <div class="overall-group">
+        <div class="overall">
+          <div class="num">${op}%</div>
+          <div class="lbl">общий прогресс</div>
+        </div>
+        <div class="overall toggle-day ${marked ? 'marked' : ''}" data-action="toggle-today">
+          <div class="num">${count}</div>
+          <div class="lbl">${ruPlural(count,'день готовлюсь','дня готовлюсь','дней готовлюсь')}</div>
+          <div class="toggle-hint">${marked ? '✓ сегодня отмечено' : 'отметить сегодня'}</div>
+        </div>
+      </div>
+    </header>
+    <nav class="tabs">
+      <button data-tab="topics" class="${state.tab==='topics'?'active':''}">Темы<span class="count">${state.topics.length}</span></button>
+      <button data-tab="tasks" class="${state.tab==='tasks'?'active':''}">Задания<span class="count">${state.tasks.length}</span></button>
+      <button data-tab="mocks" class="${state.tab==='mocks'?'active':''}">Пробные тесты<span class="count">${state.mocks.length}</span></button>
+    </nav>
+  `;
+
+  if(state.tab==='mocks'){
+    html += renderMocks();
+  } else if(state.tab==='topics'){
+    html += renderTopics();
+  } else {
+    html += renderTasks();
+  }
+
+  html += `<p class="save-note">Данные сохраняются автоматически на этом устройстве.</p>`;
+  root.innerHTML = html;
+  attachHandlers();
+}
+
+function renderItemCard(t, listKind){
+  return `
+    <div class="topic" data-id="${t.id}">
+      <div class="topic-head">
+        <div style="flex:1">
+          <div class="topic-title-row">
+            <input class="topic-name-input" data-field="name" data-list="${listKind}" data-id="${t.id}" value="${escapeAttr(t.name)}">
+          </div>
+          <div class="topic-desc">${escapeHtml(t.desc)}</div>
+        </div>
+        <button class="status-pill status-${t.status}" data-action="cycle-status" data-list="${listKind}" data-id="${t.id}">${statusLabel(t.status)}</button>
+      </div>
+      <div class="topic-body">
+        <div class="links-row">
+          ${t.links.map((l,i)=>`
+            <div class="link-chip">
+              <a href="${escapeAttr(l)}" target="_blank" rel="noopener">${escapeHtml(shortenUrl(l))}</a>
+              <button data-action="remove-link" data-list="${listKind}" data-id="${t.id}" data-idx="${i}">✕</button>
+            </div>
+          `).join('')}
+        </div>
+        <div class="add-link-row">
+          <input type="text" placeholder="Вставь ссылку на материал/доску…" data-role="link-input" data-list="${listKind}" data-id="${t.id}">
+          <button data-action="add-link" data-list="${listKind}" data-id="${t.id}">Добавить</button>
+        </div>
+        <textarea class="notes" placeholder="Заметки…" data-role="notes" data-list="${listKind}" data-id="${t.id}">${escapeHtml(t.notes)}</textarea>
+      </div>
+      <div class="topic-footer">
+        <button class="remove-topic" data-action="remove-item" data-list="${listKind}" data-id="${t.id}">Удалить</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderTopicCard(t){
+  return `
+    <div class="topic" data-id="${t.id}">
+      <div class="topic-head">
+        <div style="flex:1">
+          <div class="topic-title-row">
+            <input class="topic-name-input" data-field="name" data-list="topics" data-id="${t.id}" value="${escapeAttr(t.name)}">
+          </div>
+          <div class="topic-desc">${escapeHtml(t.desc)}</div>
+          <div class="meta-row">
+            <div class="difficulty-btns">
+              ${[1,2,3].map(n=>`<button class="flame-btn ${t.difficulty>=n?'lit':''}" data-action="set-difficulty" data-id="${t.id}" data-level="${n}">●</button>`).join('')}
+            </div>
+            ${t.tags.map((tag,i)=>`
+              <div class="tag-chip">
+                ${escapeHtml(tag)}
+                <button data-action="remove-tag" data-id="${t.id}" data-idx="${i}">✕</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <button class="status-pill status-${t.status}" data-action="cycle-status" data-list="topics" data-id="${t.id}">${statusLabel(t.status)}</button>
+      </div>
+      <div class="topic-body">
+        <div class="add-tag-row">
+          <input type="text" placeholder="Новый тег…" data-role="tag-input" data-id="${t.id}">
+          <button data-action="add-tag" data-id="${t.id}">+ Тег</button>
+        </div>
+
+        <div class="field-label">Даты прохождения занятия</div>
+        <div class="links-row">
+          ${t.dates.map((d,i)=>`
+            <div class="date-chip">
+              ${escapeHtml(formatDate(d))}
+              <button data-action="remove-date" data-id="${t.id}" data-idx="${i}">✕</button>
+            </div>
+          `).join('')}
+        </div>
+        <div class="add-date-row">
+          <input type="date" data-role="date-input" data-id="${t.id}">
+          <button data-action="add-date" data-id="${t.id}">+ Дата</button>
+        </div>
+
+        <div class="field-label">Материалы</div>
+        <div class="links-row">
+          ${t.links.map((l,i)=>`
+            <div class="link-chip">
+              <a href="${escapeAttr(l)}" target="_blank" rel="noopener">${escapeHtml(shortenUrl(l))}</a>
+              <button data-action="remove-link" data-list="topics" data-id="${t.id}" data-idx="${i}">✕</button>
+            </div>
+          `).join('')}
+        </div>
+        <div class="add-link-row">
+          <input type="text" placeholder="Вставь ссылку на материал/доску…" data-role="link-input" data-list="topics" data-id="${t.id}">
+          <button data-action="add-link" data-list="topics" data-id="${t.id}">Добавить</button>
+        </div>
+        <textarea class="notes" placeholder="Заметки…" data-role="notes" data-list="topics" data-id="${t.id}">${escapeHtml(t.notes)}</textarea>
+      </div>
+      <div class="topic-footer">
+        <button class="remove-topic" data-action="remove-item" data-list="topics" data-id="${t.id}">Удалить</button>
+      </div>
+    </div>
+  `;
+}
+
+function allTags(){
+  const set = new Set();
+  state.topics.forEach(t=> (t.tags||[]).forEach(tag=>set.add(tag)));
+  return [...set];
+}
+
+function renderTopics(){
+  const pct = topicsProgress();
+  const tags = allTags();
+  const f = state.topicFilters;
+
+  const filtered = state.topics.filter(t=>{
+    const diffOk = !f.difficulty || t.difficulty===f.difficulty;
+    const tagsOk = f.tags.length===0 || f.tags.some(tag=>t.tags.includes(tag));
+    return diffOk && tagsOk;
+  });
+
+  let h = `
+    <div class="filters">
+      <div class="filter-group">
+        <span class="filter-group-label">Сложность:</span>
+        ${[1,2,3].map(n=>`<button class="flame-filter-btn ${f.difficulty===n?'active':''}" data-action="filter-difficulty" data-level="${n}">${'●'.repeat(n)}${'○'.repeat(3-n)}</button>`).join('')}
+      </div>
+      ${tags.length ? `<div class="filter-group">
+        <span class="filter-group-label">Теги:</span>
+        ${tags.map(tag=>`<button class="tag-filter-btn ${f.tags.includes(tag)?'active':''}" data-action="filter-tag" data-tag="${escapeAttr(tag)}">${escapeHtml(tag)}</button>`).join('')}
+      </div>` : ''}
+      ${(f.difficulty || f.tags.length) ? `<button class="clear-filters" data-action="clear-filters">Сбросить фильтры</button>` : ''}
+    </div>
+    <div class="section-progress">
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+      <div class="bar-pct">${pct}% готово</div>
+    </div>
+  `;
+  if(filtered.length===0){
+    h += `<div class="empty">${state.topics.length===0 ? 'Пока нет тем — добавь первую ниже.' : 'Нет тем по выбранным фильтрам.'}</div>`;
+  }
+  filtered.forEach(t=>{ h += renderTopicCard(t); });
+  h += `<button class="add-topic-btn" data-action="add-item" data-list="topics">+ Добавить тему</button>`;
+  return h;
+}
+
+function renderTasks(){
+  const items = state.tasks.filter(t=>t.section===state.taskSection);
+  const pct = taskSectionProgress(state.taskSection);
+
+  let h = `
+    <div style="display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;">
+      ${TASK_SECTIONS.map(s=>{
+        const cnt = state.tasks.filter(t=>t.section===s.id).length;
+        return `<button data-tasksec="${s.id}" class="status-pill ${state.taskSection===s.id ? 'status-progress' : ''}" style="cursor:pointer; border:1px solid var(--line);">${s.label} · ${cnt}</button>`;
+      }).join('')}
+    </div>
+    <div class="section-progress">
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+      <div class="bar-pct">${pct}% готово</div>
+    </div>
+  `;
+
+  if(items.length===0){
+    h += `<div class="empty">Пока нет заданий в этом разделе — добавь первое ниже.</div>`;
+  }
+  items.forEach(t=>{ h += renderItemCard(t, 'tasks'); });
+  h += `<button class="add-topic-btn" data-action="add-item" data-list="tasks" data-section="${state.taskSection}">+ Добавить тип задания</button>`;
+  return h;
+}
+
+function renderMocks(){
+  const mocks = [...state.mocks].sort((a,b)=> (a.date||'').localeCompare(b.date||''));
+  const best = bestMockScore();
+  const target = state.targetScore !== '' && state.targetScore !== null ? Number(state.targetScore) : null;
+  let h = '';
+
+  h += `<div class="score-stats">
+    <div class="score-cell">
+      <div class="score-label">Целевой балл</div>
+      <input class="score-input" type="number" step="0.5" min="1" max="6" placeholder="—" data-role="target-score" value="${state.targetScore || ''}">
+    </div>
+    <div class="score-cell">
+      <div class="score-label">Лучший результат по пробным</div>
+      <div class="score-value ${best!==null ? 'accent' : ''}">${best!==null ? best.toFixed(1) : '—'}</div>
+      ${best!==null && target !== null && best>=target ? `<div class="gap-note reached">цель достигнута</div>` : ''}
+    </div>
+  </div>`;
+
+  if(mocks.filter(m=>calcOverall(m)!==null).length>=2){
+    h += `<div class="chart-wrap">
+      <div class="chart-title">Динамика общего балла (шкала 1.0–6.0)</div>
+      ${renderChart(mocks.filter(m=>calcOverall(m)!==null))}
+    </div>`;
+  }
+
+  h += `<table class="mock-table">
+    <thead><tr>
+      <th>Дата</th><th>Reading</th><th>Listening</th><th>Speaking</th><th>Writing</th><th>Итог</th><th>Заметки</th><th></th>
+    </tr></thead>
+    <tbody>`;
+
+  if(state.mocks.length===0){
+    h += `<tr><td colspan="8"><div class="empty">Ещё нет результатов — добавь первый пробный тест.</div></td></tr>`;
+  }
+
+  state.mocks.forEach(m=>{
+    const overall = calcOverall(m);
+    h += `<tr data-id="${m.id}">
+      <td><input class="date-input" type="date" data-field="date" data-id="${m.id}" value="${m.date||''}"></td>
+      <td><input type="number" step="0.5" min="1" max="6" data-field="reading" data-id="${m.id}" value="${m.reading ?? ''}"></td>
+      <td><input type="number" step="0.5" min="1" max="6" data-field="listening" data-id="${m.id}" value="${m.listening ?? ''}"></td>
+      <td><input type="number" step="0.5" min="1" max="6" data-field="speaking" data-id="${m.id}" value="${m.speaking ?? ''}"></td>
+      <td><input type="number" step="0.5" min="1" max="6" data-field="writing" data-id="${m.id}" value="${m.writing ?? ''}"></td>
+      <td class="mock-overall">${overall !== null ? overall.toFixed(1) : '—'}</td>
+      <td><input class="notes-input" type="text" data-field="notes" data-id="${m.id}" value="${escapeAttr(m.notes||'')}"></td>
+      <td><button class="del-row" data-action="remove-mock" data-id="${m.id}">✕</button></td>
+    </tr>`;
+  });
+
+  h += `</tbody></table>
+    <button class="add-mock-btn" data-action="add-mock">+ Добавить пробный тест</button>`;
+  return h;
+}
+
+function roundToHalfBand(avg){
+  // Официальное правило ETS: округление до ближайшего полубалла, ровно посередине — вверх
+  const halves = avg / 0.5;
+  return Math.floor(halves + 0.5) * 0.5;
+}
+
+function calcOverall(m){
+  const vals = [m.reading,m.listening,m.speaking,m.writing];
+  const filled = vals.filter(v=>v!==undefined && v!==null && v!=='');
+  if(filled.length < 4) return null;
+  const avg = filled.reduce((a,b)=>a+Number(b),0)/4;
+  return roundToHalfBand(avg);
+}
+
+function bestMockScore(){
+  const vals = state.mocks.map(m=>calcOverall(m)).filter(v=>v!==null);
+  if(vals.length===0) return null;
+  return Math.max(...vals);
+}
+
+function renderChart(mocks){
+  const points = mocks.map(m=>calcOverall(m)).map(v=>v===null?0:v);
+  const w = 600, h = 120, pad = 20;
+  const max = 6, min = 1;
+  const stepX = points.length>1 ? (w-2*pad)/(points.length-1) : 0;
+  const coords = points.map((v,i)=>{
+    const x = pad + i*stepX;
+    const y = h - pad - ((v-min)/(max-min))*(h-2*pad);
+    return [x,y];
+  });
+  const path = coords.map((c,i)=> (i===0?'M':'L')+c[0].toFixed(1)+','+c[1].toFixed(1)).join(' ');
+  const dots = coords.map(c=>`<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3.5" fill="#A8823C" />`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;">
+    <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#D9D4C4" stroke-width="1"/>
+    <path d="${path}" fill="none" stroke="#A8823C" stroke-width="2"/>
+    ${dots}
+  </svg>`;
+}
+
+function shortenUrl(u){
+  try{
+    const url = new URL(u);
+    return url.hostname.replace('www.','') + (url.pathname!=='/' ? url.pathname : '');
+  }catch(e){ return u; }
+}
+function formatDate(d){
+  if(!d) return '';
+  const parts = d.split('-');
+  if(parts.length!==3) return d;
+  return `${parts[2]}.${parts[1]}.${parts[0]}`;
+}
+function escapeHtml(s){
+  return (s||'').replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+}
+function escapeAttr(s){
+  return (s||'').replace(/"/g,'&quot;');
+}
+
+function listRef(kind){
+  return kind==='topics' ? state.topics : state.tasks;
+}
+function saveList(kind){
+  if(kind==='topics') saveTopics(state.topics); else saveTasks(state.tasks);
+}
+
+function attachHandlers(){
+  const targetScoreInp = document.querySelector('[data-role="target-score"]');
+  if(targetScoreInp){
+    targetScoreInp.onchange = ()=>{
+      state.targetScore = targetScoreInp.value;
+      saveTargetScore(state.targetScore);
+      render();
+    };
+  }
+
+  const toggleTodayBtn = document.querySelector('[data-action="toggle-today"]');
+  if(toggleTodayBtn){
+    toggleTodayBtn.onclick = ()=>{
+      const t = todayIso();
+      const idx = state.prepDays.indexOf(t);
+      if(idx===-1) state.prepDays.push(t); else state.prepDays.splice(idx,1);
+      savePrepDays(state.prepDays);
+      render();
+    };
+  }
+
+  document.querySelectorAll('[data-tab]').forEach(btn=>{
+    btn.onclick = ()=>{ state.tab = btn.dataset.tab; render(); };
+  });
+
+  document.querySelectorAll('[data-tasksec]').forEach(btn=>{
+    btn.onclick = ()=>{ state.taskSection = btn.dataset.tasksec; render(); };
+  });
+
+  // topic filters
+  document.querySelectorAll('[data-action="filter-difficulty"]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const lvl = Number(btn.dataset.level);
+      state.topicFilters.difficulty = state.topicFilters.difficulty===lvl ? null : lvl;
+      render();
+    };
+  });
+  document.querySelectorAll('[data-action="filter-tag"]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const tag = btn.dataset.tag;
+      const idx = state.topicFilters.tags.indexOf(tag);
+      if(idx===-1) state.topicFilters.tags.push(tag); else state.topicFilters.tags.splice(idx,1);
+      render();
+    };
+  });
+  const clearFiltersBtn = document.querySelector('[data-action="clear-filters"]');
+  if(clearFiltersBtn){
+    clearFiltersBtn.onclick = ()=>{
+      state.topicFilters = {difficulty:null, tags:[]};
+      render();
+    };
+  }
+
+  // difficulty on a topic
+  document.querySelectorAll('[data-action="set-difficulty"]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const t = state.topics.find(t=>t.id===btn.dataset.id);
+      const lvl = Number(btn.dataset.level);
+      t.difficulty = t.difficulty===lvl ? lvl : lvl; // always set to clicked level
+      t.difficulty = lvl;
+      saveTopics(state.topics);
+      render();
+    };
+  });
+
+  // tags
+  document.querySelectorAll('[data-action="add-tag"]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const input = document.querySelector(`[data-role="tag-input"][data-id="${btn.dataset.id}"]`);
+      const val = input.value.trim();
+      if(!val) return;
+      const t = state.topics.find(t=>t.id===btn.dataset.id);
+      if(!t.tags.includes(val)) t.tags.push(val);
+      saveTopics(state.topics);
+      render();
+    };
+  });
+  document.querySelectorAll('[data-action="remove-tag"]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const t = state.topics.find(t=>t.id===btn.dataset.id);
+      t.tags.splice(Number(btn.dataset.idx),1);
+      saveTopics(state.topics);
+      render();
+    };
+  });
+
+  // dates
+  document.querySelectorAll('[data-action="add-date"]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const input = document.querySelector(`[data-role="date-input"][data-id="${btn.dataset.id}"]`);
+      const val = input.value;
+      if(!val) return;
+      const t = state.topics.find(t=>t.id===btn.dataset.id);
+      t.dates.push(val);
+      t.dates.sort();
+      saveTopics(state.topics);
+      render();
+    };
+  });
+  document.querySelectorAll('[data-action="remove-date"]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const t = state.topics.find(t=>t.id===btn.dataset.id);
+      t.dates.splice(Number(btn.dataset.idx),1);
+      saveTopics(state.topics);
+      render();
+    };
+  });
+
+  // item name edit
+  document.querySelectorAll('[data-field="name"]').forEach(inp=>{
+    inp.onchange = ()=>{
+      const list = listRef(inp.dataset.list);
+      const t = list.find(t=>t.id===inp.dataset.id);
+      t.name = inp.value;
+      saveList(inp.dataset.list);
+    };
+  });
+
+  document.querySelectorAll('[data-action="cycle-status"]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const list = listRef(btn.dataset.list);
+      const t = list.find(t=>t.id===btn.dataset.id);
+      t.status = nextStatus(t.status);
+      saveList(btn.dataset.list);
+      render();
+    };
+  });
+
+  document.querySelectorAll('[data-action="add-link"]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const input = document.querySelector(`[data-role="link-input"][data-list="${btn.dataset.list}"][data-id="${btn.dataset.id}"]`);
+      const val = input.value.trim();
+      if(!val) return;
+      const list = listRef(btn.dataset.list);
+      const t = list.find(t=>t.id===btn.dataset.id);
+      t.links.push(val);
+      saveList(btn.dataset.list);
+      render();
+    };
+  });
+
+  document.querySelectorAll('[data-action="remove-link"]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const list = listRef(btn.dataset.list);
+      const t = list.find(t=>t.id===btn.dataset.id);
+      t.links.splice(Number(btn.dataset.idx),1);
+      saveList(btn.dataset.list);
+      render();
+    };
+  });
+
+  document.querySelectorAll('[data-role="notes"]').forEach(ta=>{
+    ta.onchange = ()=>{
+      const list = listRef(ta.dataset.list);
+      const t = list.find(t=>t.id===ta.dataset.id);
+      t.notes = ta.value;
+      saveList(ta.dataset.list);
+    };
+  });
+
+  document.querySelectorAll('[data-action="remove-item"]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const kind = btn.dataset.list;
+      if(kind==='topics'){
+        state.topics = state.topics.filter(t=>t.id!==btn.dataset.id);
+      } else {
+        state.tasks = state.tasks.filter(t=>t.id!==btn.dataset.id);
+      }
+      saveList(kind);
+      render();
+    };
+  });
+
+  const addItemBtn = document.querySelector('[data-action="add-item"]');
+  if(addItemBtn){
+    addItemBtn.onclick = ()=>{
+      const kind = addItemBtn.dataset.list;
+      const name = prompt(kind==='topics' ? 'Название темы:' : 'Название типа задания:');
+      if(!name) return;
+      const desc = prompt('Короткое описание (необязательно):') || '';
+      if(kind==='topics'){
+        state.topics.push({id:uid(), name, desc, status:'todo', links:[], notes:'', difficulty:1, tags:[], dates:[]});
+      } else {
+        state.tasks.push({id:uid(), section:addItemBtn.dataset.section, name, desc, status:'todo', links:[], notes:''});
+      }
+      saveList(kind);
+      render();
+    };
+  }
+
+  // mock tests
+  document.querySelectorAll('.mock-table input').forEach(inp=>{
+    inp.onchange = ()=>{
+      const m = state.mocks.find(m=>m.id===inp.dataset.id);
+      const field = inp.dataset.field;
+      m[field] = field==='date' || field==='notes' ? inp.value : (inp.value===''? '' : Number(inp.value));
+      saveMocks(state.mocks);
+      render();
+    };
+  });
+
+  document.querySelectorAll('[data-action="remove-mock"]').forEach(btn=>{
+    btn.onclick = ()=>{
+      state.mocks = state.mocks.filter(m=>m.id!==btn.dataset.id);
+      saveMocks(state.mocks);
+      render();
+    };
+  });
+
+  const addMockBtn = document.querySelector('[data-action="add-mock"]');
+  if(addMockBtn){
+    addMockBtn.onclick = ()=>{
+      state.mocks.push({id:uid(), date:new Date().toISOString().slice(0,10), reading:'', listening:'', speaking:'', writing:'', notes:''});
+      saveMocks(state.mocks);
+      render();
+    };
+  }
+}
+
+loadState((s)=>{
+  state.topics = s.topics.map(t=>({
+    difficulty: 1, tags: [], dates: [],
+    ...t,
+  }));
+  state.tasks = s.tasks;
+  state.mocks = s.mocks;
+  state.prepDays = s.prepDays;
+  state.targetScore = s.targetScore;
+  state.ready = true;
+  render();
+});
+</script>
+</body>
+</html>
