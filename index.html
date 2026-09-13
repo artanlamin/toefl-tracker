@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TOEFL Tracker</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="window.__supabaseLoadFailed=true"></script>
 <style>
   :root{
     color-scheme: light;
@@ -799,7 +799,29 @@ function uid(){ return Math.random().toString(36).slice(2,9); }
 // ==== Supabase ====
 const SUPABASE_URL = 'https://nmeshbvgnfhpruuogzmr.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZXNoYnZnbmZocHJ1dW9nem1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNTY4NzMsImV4cCI6MjEwNDgzMjg3M30.ysT5UNiRGRpZZIuzR_dAZEJvmcsb81K_3-tKjK46GjE';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function showFatalError(message){
+  const el = document.getElementById('authScreen');
+  if(!el) return;
+  el.style.display = '';
+  el.innerHTML = `
+    <div class="auth-screen">
+      <div class="auth-card">
+        <h1>Не удалось загрузить приложение</h1>
+        <p class="sub">${message}</p>
+        <button class="primary" onclick="location.reload()">Обновить страницу</button>
+      </div>
+    </div>`;
+}
+
+let supabase = null;
+if(window.supabase && typeof window.supabase.createClient === 'function'){
+  try{
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }catch(err){
+    console.error('Supabase client init failed', err);
+  }
+}
 
 let currentUser = null;
 
@@ -1603,21 +1625,28 @@ function onSignedOut(){
 
 document.getElementById('root').style.display = 'none';
 
-supabase.auth.getSession().then(({data})=>{
-  if(data.session){
-    onAuthed(data.session.user);
-  } else {
-    renderAuthScreen();
-  }
-});
+if(!supabase){
+  showFatalError('Не удалось загрузить библиотеку Supabase (обычно из-за медленного интернета или блокировщика скриптов). Проверьте подключение к интернету и нажмите «Обновить страницу».');
+} else {
+  supabase.auth.getSession().then(({data})=>{
+    if(data.session){
+      onAuthed(data.session.user);
+    } else {
+      renderAuthScreen();
+    }
+  }).catch(err=>{
+    console.error(err);
+    showFatalError('Не удалось связаться с сервером авторизации. Проверьте подключение к интернету и попробуйте снова.');
+  });
 
-supabase.auth.onAuthStateChange((event, session)=>{
-  if(event === 'SIGNED_OUT'){
-    onSignedOut();
-  } else if(event === 'SIGNED_IN' && !currentUser && session){
-    onAuthed(session.user);
-  }
-});
+  supabase.auth.onAuthStateChange((event, session)=>{
+    if(event === 'SIGNED_OUT'){
+      onSignedOut();
+    } else if(event === 'SIGNED_IN' && !currentUser && session){
+      onAuthed(session.user);
+    }
+  });
+}
 </script>
 </body>
 </html>
