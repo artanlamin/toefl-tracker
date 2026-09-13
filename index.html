@@ -1,11 +1,15 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TOEFL Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
+    color-scheme: light;
+  }
+  :root, :root[data-theme="light"]{
     --paper: #EDEAE0;
     --panel: #F8F6EF;
     --ink: #1E2320;
@@ -17,6 +21,20 @@
     --teal-soft: #DCE8E3;
     --clay: #A6503C;
     --clay-soft: #F1DCD4;
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --paper: #1B1D1B;
+    --panel: #24261F;
+    --ink: #ECE9DE;
+    --ink-soft: #A7ACA3;
+    --line: #3A3D34;
+    --gold: #D8AE63;
+    --gold-soft: #3A331F;
+    --teal: #7FB3A1;
+    --teal-soft: #223330;
+    --clay: #D48A72;
+    --clay-soft: #3A2620;
   }
   *{box-sizing:border-box;}
   body{
@@ -595,9 +613,147 @@
     color:var(--ink-soft);
     margin:10px 0 4px;
   }
+  .theme-toggle{
+    position:fixed;
+    top:16px;
+    right:16px;
+    z-index:1000;
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:var(--panel);
+    color:var(--ink);
+    font-size:16px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    box-shadow:0 1px 4px rgba(0,0,0,0.08);
+  }
+  .theme-toggle:hover{
+    border-color:var(--gold);
+    color:var(--gold);
+  }
+  .save-status{
+    position:fixed;
+    top:16px;
+    left:16px;
+    z-index:1000;
+    font-size:12px;
+    padding:6px 12px;
+    border-radius:20px;
+    border:1px solid var(--line);
+    background:var(--panel);
+    color:var(--ink-soft);
+    opacity:0;
+    transition:opacity .25s ease;
+    pointer-events:none;
+  }
+  .save-status.show{ opacity:1; }
+  .save-status.error{
+    color:#8A2E1E;
+    border-color:#D48A72;
+    background:var(--clay-soft);
+  }
+  .auth-screen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:var(--paper);
+    padding:20px;
+  }
+  .auth-card{
+    width:100%;
+    max-width:340px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:28px 24px;
+  }
+  .auth-card h1{
+    font-size:19px;
+    margin:0 0 4px;
+    color:var(--ink);
+  }
+  .auth-card p.sub{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin:0 0 18px;
+  }
+  .auth-card input{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    background:var(--paper);
+    color:var(--ink);
+    font-size:14px;
+    margin-bottom:10px;
+  }
+  .auth-card button.primary{
+    width:100%;
+    padding:10px 12px;
+    border:none;
+    border-radius:8px;
+    background:var(--teal);
+    color:#fff;
+    font-size:14px;
+    cursor:pointer;
+    margin-top:4px;
+  }
+  .auth-card button.link{
+    width:100%;
+    background:none;
+    border:none;
+    color:var(--ink-soft);
+    font-size:12.5px;
+    margin-top:12px;
+    cursor:pointer;
+    text-decoration:underline;
+  }
+  .auth-error{
+    color:#8A2E1E;
+    font-size:12.5px;
+    margin:-2px 0 10px;
+  }
+  .auth-note{
+    color:var(--ink-soft);
+    font-size:12px;
+    margin-top:10px;
+  }
+  .top-bar-account{
+    position:fixed;
+    top:16px;
+    right:64px;
+    z-index:1000;
+    font-size:12px;
+    color:var(--ink-soft);
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:8px 12px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .top-bar-account button{
+    border:none;
+    background:none;
+    color:var(--clay);
+    cursor:pointer;
+    font-size:12px;
+    text-decoration:underline;
+    padding:0;
+  }
 </style>
 </head>
 <body>
+<button class="theme-toggle" id="themeToggle" title="Переключить тему" aria-label="Переключить тему">🌙</button>
+<div class="save-status" id="saveStatus"></div>
+<div class="top-bar-account" id="accountBar" style="display:none;"></div>
+<div id="authScreen"></div>
 <div id="root" class="app"></div>
 
 <script>
@@ -640,58 +796,112 @@ const DEFAULT_TASKS = [
 
 function uid(){ return Math.random().toString(36).slice(2,9); }
 
-// Локальное хранилище браузера (работает офлайн, в т.ч. как приложение на экране «Домой»)
-const LS_PREFIX = 'toefl_tracker_';
-function lsGet(key){
-  return new Promise((resolve)=>{
-    try{
-      const raw = localStorage.getItem(LS_PREFIX + key);
-      resolve(raw === null ? null : {value: raw});
-    }catch(e){ resolve(null); }
-  });
+// ==== Supabase ====
+const SUPABASE_URL = 'https://nmeshbvgnfhpruuogzmr.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tZXNoYnZnbmZocHJ1dW9nem1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyNTY4NzMsImV4cCI6MjEwNDgzMjg3M30.ysT5UNiRGRpZZIuzR_dAZEJvmcsb81K_3-tKjK46GjE';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('themeToggle');
+  if(btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
 }
-function lsSet(key, value){
-  return new Promise((resolve)=>{
-    try{
-      localStorage.setItem(LS_PREFIX + key, value);
-      resolve({key, value});
-    }catch(e){ resolve(null); }
-  });
+
+function initTheme(){
+  applyTheme('light'); // всегда светлая по умолчанию, без учёта системных настроек
+  try{
+    const saved = localStorage.getItem('theme-pref');
+    if(saved === 'dark' || saved === 'light') applyTheme(saved);
+  }catch(err){}
+
+  const btn = document.getElementById('themeToggle');
+  if(btn){
+    btn.onclick = ()=>{
+      const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      try{ localStorage.setItem('theme-pref', next); }catch(err){}
+    };
+  }
+}
+initTheme();
+
+let saveStatusTimer = null;
+function showSaveStatus(ok){
+  const el = document.getElementById('saveStatus');
+  if(!el) return;
+  el.textContent = ok ? 'Сохранено' : 'Ошибка сохранения — изменение не сохранилось';
+  el.className = 'save-status show' + (ok ? '' : ' error');
+  clearTimeout(saveStatusTimer);
+  saveStatusTimer = setTimeout(()=>{ el.className = 'save-status'; }, ok ? 1400 : 4000);
+}
+
+function storageGet(key){
+  if(!currentUser) return Promise.resolve(null);
+  return supabase.from('user_data').select('value').eq('user_id', currentUser.id).eq('key', key).maybeSingle()
+    .then(({data, error})=>{
+      if(error){ console.error('storage.get failed for', key, error); return null; }
+      return data ? data.value : null;
+    })
+    .catch(err=>{ console.error('storage.get threw for', key, err); return null; });
+}
+
+function storageSet(key, value){
+  if(!currentUser){ showSaveStatus(false); return Promise.resolve(null); }
+  return supabase.from('user_data').upsert({
+    user_id: currentUser.id,
+    key: key,
+    value: value,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,key' })
+    .then(({error})=>{
+      showSaveStatus(!error);
+      if(error) console.error('storage.set failed for', key, error);
+      return !error;
+    })
+    .catch(err=>{
+      console.error('storage.set threw for', key, err);
+      showSaveStatus(false);
+      return null;
+    });
 }
 
 function loadState(cb){
   Promise.all([
-    lsGet('topics'),
-    lsGet('tasks'),
-    lsGet('mocktests'),
-    lsGet('prepdays'),
-    lsGet('targetscore'),
+    storageGet('topics'),
+    storageGet('tasks'),
+    storageGet('mocktests'),
+    storageGet('prepdays'),
+    storageGet('targetscore'),
   ]).then(([t,tk,m,pd,ts])=>{
     cb({
-      topics: t ? JSON.parse(t.value) : DEFAULT_TOPICS,
-      tasks: tk ? JSON.parse(tk.value) : DEFAULT_TASKS,
-      mocks: m ? JSON.parse(m.value) : [],
-      prepDays: pd ? JSON.parse(pd.value) : [],
-      targetScore: ts ? ts.value : '',
+      topics: t || DEFAULT_TOPICS,
+      tasks: tk || DEFAULT_TASKS,
+      mocks: m || [],
+      prepDays: pd || [],
+      targetScore: ts || '',
     });
   });
 }
 
 function saveTopics(topics){
-  lsSet('topics', JSON.stringify(topics));
+  storageSet('topics', topics);
 }
 function saveTasks(tasks){
-  lsSet('tasks', JSON.stringify(tasks));
+  storageSet('tasks', tasks);
 }
 function saveMocks(mocks){
-  lsSet('mocktests', JSON.stringify(mocks));
+  storageSet('mocktests', mocks);
 }
 function savePrepDays(days){
-  lsSet('prepdays', JSON.stringify(days));
+  storageSet('prepdays', days);
 }
 function saveTargetScore(v){
-  lsSet('targetscore', String(v));
+  storageSet('targetscore', v);
 }
+
 
 let state = { topics: [], tasks: [], mocks: [], prepDays: [], targetScore: '', tab: 'topics', taskSection: 'reading', topicFilters: {difficulty:null, tags:[]}, ready:false };
 
@@ -1290,17 +1500,123 @@ function attachHandlers(){
   }
 }
 
-loadState((s)=>{
-  state.topics = s.topics.map(t=>({
-    difficulty: 1, tags: [], dates: [],
-    ...t,
-  }));
-  state.tasks = s.tasks;
-  state.mocks = s.mocks;
-  state.prepDays = s.prepDays;
-  state.targetScore = s.targetScore;
-  state.ready = true;
-  render();
+// ==== Экран входа / регистрации ====
+let authMode = 'signin'; // 'signin' | 'signup'
+let authError = '';
+let authBusy = false;
+
+function renderAuthScreen(){
+  const el = document.getElementById('authScreen');
+  const isSignup = authMode === 'signup';
+  el.innerHTML = `
+    <div class="auth-screen">
+      <div class="auth-card">
+        <h1>TOEFL Tracker</h1>
+        <p class="sub">${isSignup ? 'Создайте аккаунт, чтобы прогресс сохранялся на всех устройствах' : 'Войдите, чтобы продолжить подготовку'}</p>
+        ${authError ? `<div class="auth-error">${authError}</div>` : ''}
+        <input type="email" id="authEmail" placeholder="Email" autocomplete="email" />
+        <input type="password" id="authPassword" placeholder="Пароль" autocomplete="${isSignup ? 'new-password' : 'current-password'}" />
+        <button class="primary" id="authSubmit" ${authBusy ? 'disabled' : ''}>${authBusy ? 'Подождите…' : (isSignup ? 'Зарегистрироваться' : 'Войти')}</button>
+        <button class="link" id="authSwitch">${isSignup ? 'У меня уже есть аккаунт' : 'Впервые здесь? Создать аккаунт'}</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('authSwitch').onclick = ()=>{
+    authMode = isSignup ? 'signin' : 'signup';
+    authError = '';
+    renderAuthScreen();
+  };
+  document.getElementById('authSubmit').onclick = async ()=>{
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPassword').value;
+    if(!email || !password){ authError = 'Заполните email и пароль'; renderAuthScreen(); return; }
+    authError = '';
+    authBusy = true;
+    renderAuthScreen();
+    try{
+      if(isSignup){
+        const {data, error} = await supabase.auth.signUp({ email, password });
+        if(error){ authError = error.message; authBusy = false; renderAuthScreen(); return; }
+        if(data.session){
+          onAuthed(data.session.user);
+        } else {
+          authBusy = false;
+          authError = '';
+          const el2 = document.getElementById('authScreen');
+          el2.innerHTML = `<div class="auth-screen"><div class="auth-card"><h1>Проверьте почту</h1><p class="sub">Мы отправили письмо для подтверждения на ${email}. Перейдите по ссылке в письме, затем войдите.</p><button class="primary" id="backToSignin">К входу</button></div></div>`;
+          document.getElementById('backToSignin').onclick = ()=>{ authMode='signin'; renderAuthScreen(); };
+        }
+      } else {
+        const {data, error} = await supabase.auth.signInWithPassword({ email, password });
+        if(error){ authError = error.message; authBusy = false; renderAuthScreen(); return; }
+        onAuthed(data.session.user);
+      }
+    }catch(err){
+      authError = 'Что-то пошло не так, попробуйте снова';
+      authBusy = false;
+      renderAuthScreen();
+    }
+  };
+}
+
+function renderAccountBar(){
+  const bar = document.getElementById('accountBar');
+  if(!currentUser){ bar.style.display = 'none'; bar.innerHTML=''; return; }
+  bar.style.display = 'flex';
+  bar.innerHTML = `<span>${currentUser.email}</span><button id="signOutBtn">Выйти</button>`;
+  document.getElementById('signOutBtn').onclick = async ()=>{
+    await supabase.auth.signOut();
+  };
+}
+
+function onAuthed(user){
+  currentUser = user;
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('root').style.display = '';
+  renderAccountBar();
+  authBusy = false;
+  loadState((s)=>{
+    state.topics = s.topics.map(t=>({
+      difficulty: 1, tags: [], dates: [],
+      ...t,
+    }));
+    state.tasks = s.tasks;
+    state.mocks = s.mocks;
+    state.prepDays = s.prepDays;
+    state.targetScore = s.targetScore;
+    state.ready = true;
+    render();
+  });
+}
+
+function onSignedOut(){
+  currentUser = null;
+  state = { topics: [], tasks: [], mocks: [], prepDays: [], targetScore: '', tab: 'topics', taskSection: 'reading', topicFilters: {difficulty:null, tags:[]}, ready:false };
+  document.getElementById('root').style.display = 'none';
+  document.getElementById('root').innerHTML = '';
+  renderAccountBar();
+  authMode = 'signin';
+  authError = '';
+  document.getElementById('authScreen').style.display = '';
+  renderAuthScreen();
+}
+
+document.getElementById('root').style.display = 'none';
+
+supabase.auth.getSession().then(({data})=>{
+  if(data.session){
+    onAuthed(data.session.user);
+  } else {
+    renderAuthScreen();
+  }
+});
+
+supabase.auth.onAuthStateChange((event, session)=>{
+  if(event === 'SIGNED_OUT'){
+    onSignedOut();
+  } else if(event === 'SIGNED_IN' && !currentUser && session){
+    onAuthed(session.user);
+  }
 });
 </script>
 </body>
